@@ -391,7 +391,7 @@ function createAudioEngine() {
   let voices = [];
   let currentRatio = [3, 2];
   let currentTimbre = 'sine';
-  let currentBaseFreq = 31.62;
+  let currentBaseFreq = 100.00;
   let running = false;
   // Cache impulse buffers per timbre
   const impulseCache = {};
@@ -559,7 +559,7 @@ function visualizationEngine(canvas) {
   ];
 
   let ratio = [3, 2];
-  let baseFreq = 31.62;
+  let baseFreq = 100.00;
 
   function setMode(m) { mode = m; }
   function setState(r, f) { ratio = r; baseFreq = f; }
@@ -1380,7 +1380,7 @@ function uiController() {
   const exporter = exportEngine();
 
   let currentRatio = [3, 2];
-  let currentBaseFreq = 31.62;
+  let currentBaseFreq = 100.00;
 
   const urlState = urlMgr.read();
   if (urlState.ratio) ratioInput.value = urlState.ratio;

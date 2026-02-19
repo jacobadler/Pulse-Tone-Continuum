@@ -2,10 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pulse–Tone Continuum</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+  }
 
   body {
     background: #0a0a0f;
@@ -14,17 +22,19 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    overflow: hidden;
   }
 
   .container {
     width: 580px;
     max-width: 95vw;
+    max-height: 100vh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     gap: 20px;
     align-items: center;
+    overflow: hidden;
+    padding: 10px 0;
   }
 
   .controls-row {
@@ -143,6 +153,7 @@
     border-radius: 3px;
     outline: none;
     cursor: pointer;
+    touch-action: pan-x;
   }
 
   input[type="range"]::-webkit-slider-thumb {
@@ -205,6 +216,75 @@
   .export-btn { background: #2a2a3a; padding: 10px 20px; }
   .export-btn:hover { background: #3a3a4a; }
   .export-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ---- Mobile ---- */
+  @media (max-width: 600px) {
+    .container {
+      gap: 10px;
+      padding: 8px 10px;
+      max-width: 100vw;
+      justify-content: center;
+    }
+
+    .controls-row {
+      gap: 8px;
+    }
+
+    input[type="text"], select {
+      font-size: 14px;
+      padding: 8px 10px;
+    }
+
+    label { font-size: 10px; }
+    .error-msg { min-height: 12px; font-size: 10px; }
+
+    .viz-toggles {
+      gap: 2px;
+    }
+
+    .viz-btn {
+      font-size: 8px;
+      padding: 5px 4px;
+      letter-spacing: 0.02em;
+    }
+
+    canvas {
+      height: 200px;
+    }
+
+    .slider-track {
+      height: 56px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 32px; height: 32px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 32px; height: 32px;
+    }
+
+    .slider-labels { font-size: 9px; }
+
+    .freq-display { font-size: 24px; }
+    .freq-unit { font-size: 12px; }
+
+    .buttons-row { gap: 8px; }
+
+    .start-btn, .export-btn {
+      font-size: 12px;
+      padding: 10px 20px;
+    }
+  }
+
+  /* Extra-short phones (e.g. iPhone SE, <700px tall) */
+  @media (max-height: 700px) and (max-width: 600px) {
+    .container { gap: 6px; padding: 4px 10px; }
+    canvas { height: 150px; }
+    .freq-display { font-size: 20px; }
+    .slider-track { height: 48px; }
+    .start-btn, .export-btn { padding: 8px 16px; }
+  }
 </style>
 </head>
 <body>
@@ -250,7 +330,7 @@
 
   <div class="slider-section">
     <div class="slider-track">
-      <input type="range" id="freqSlider" min="0" max="1" step="0.001" value="0.5">
+      <input type="range" id="freqSlider" min="0" max="1" step="0.001" value="0.661">
     </div>
     <div class="slider-labels">
       <span>Pulse</span>
@@ -259,7 +339,7 @@
   </div>
 
   <div class="freq-display">
-    <span id="freqValue">100.00</span><span class="freq-unit">Hz</span>
+    <span id="freqValue">150</span><span class="freq-unit">Hz</span>
   </div>
 
   <div class="buttons-row">
@@ -391,7 +471,7 @@ function createAudioEngine() {
   let voices = [];
   let currentRatio = [3, 2];
   let currentTimbre = 'sine';
-  let currentBaseFreq = 100.00;
+  let currentBaseFreq = 150;
   let running = false;
   // Cache impulse buffers per timbre
   const impulseCache = {};
@@ -559,7 +639,7 @@ function visualizationEngine(canvas) {
   ];
 
   let ratio = [3, 2];
-  let baseFreq = 100.00;
+  let baseFreq = 150;
 
   function setMode(m) { mode = m; }
   function setState(r, f) { ratio = r; baseFreq = f; }
@@ -1380,7 +1460,7 @@ function uiController() {
   const exporter = exportEngine();
 
   let currentRatio = [3, 2];
-  let currentBaseFreq = 100.00;
+  let currentBaseFreq = 150;
 
   const urlState = urlMgr.read();
   if (urlState.ratio) ratioInput.value = urlState.ratio;
@@ -1470,6 +1550,11 @@ function uiController() {
 }
 
 uiController();
+
+// Prevent mobile bounce/scroll/zoom on the whole page
+document.addEventListener('touchmove', function(e) {
+  if (e.target.type !== 'range') e.preventDefault();
+}, { passive: false });
 </script>
 
 </body>

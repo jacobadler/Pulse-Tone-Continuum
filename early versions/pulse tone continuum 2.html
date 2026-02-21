@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse–Tone Continuum</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e8;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .container {
+    width: 520px;
+    max-width: 95vw;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+  }
+
+  /* --- Top Controls --- */
+  .controls-row {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
+
+  label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+
+  input[type="text"], select {
+    background: #16161e;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    color: #e0e0e8;
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 15px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus, select:focus {
+    border-color: #5a5aff;
+  }
+
+  input[type="text"].error {
+    border-color: #ff4444;
+  }
+
+  .error-msg {
+    font-size: 11px;
+    color: #ff4444;
+    min-height: 16px;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  /* --- Visualization --- */
+  .viz-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .viz-toggles {
+    display: flex;
+    gap: 4px;
+  }
+
+  .viz-btn {
+    background: #16161e;
+    border: 1px solid #2a2a3a;
+    color: #888;
+    font-family: inherit;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .viz-btn:hover { border-color: #5a5aff; color: #c0c0e0; }
+  .viz-btn.active { background: #5a5aff; border-color: #5a5aff; color: #fff; }
+
+  canvas {
+    width: 100%;
+    height: 200px;
+    border-radius: 8px;
+    background: #0e0e16;
+    display: block;
+  }
+
+  /* --- Slider --- */
+  .slider-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .slider-track {
+    width: 100%;
+    height: 56px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #2a2a4a, #5a5aff);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e0e8;
+    box-shadow: 0 0 10px rgba(90, 90, 255, 0.5);
+    cursor: grab;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e0e8;
+    box-shadow: 0 0 10px rgba(90, 90, 255, 0.5);
+    border: none;
+    cursor: grab;
+  }
+
+  input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; }
+  input[type="range"]:active::-moz-range-thumb { cursor: grabbing; }
+
+  .slider-labels {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* --- Frequency Display --- */
+  .freq-display {
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #c0c0ff;
+  }
+
+  .freq-unit {
+    font-size: 14px;
+    color: #666;
+    margin-left: 4px;
+  }
+
+  /* --- Buttons Row --- */
+  .buttons-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .start-btn, .export-btn {
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 10px 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .start-btn { background: #5a5aff; }
+  .start-btn:hover { background: #4a4ae8; }
+  .start-btn.active { background: #ff4466; }
+  .start-btn.active:hover { background: #e83355; }
+
+  .export-btn { background: #2a2a3a; padding: 10px 20px; }
+  .export-btn:hover { background: #3a3a4a; }
+  .export-btn:disabled { opacity: 0.4; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="controls-row">
+    <div class="input-group" style="flex:2">
+      <label for="ratioInput">Enter Ratio (e.g., 3:2 or 7:5:4)</label>
+      <input type="text" id="ratioInput" value="3:2" spellcheck="false" autocomplete="off">
+      <div class="error-msg" id="ratioError"></div>
+    </div>
+    <div class="input-group" style="flex:1">
+      <label for="timbreSelect">Timbre</label>
+      <select id="timbreSelect">
+        <option value="sine">sine</option>
+        <option value="square">square</option>
+        <option value="triangle">triangle</option>
+        <option value="sawtooth">sawtooth</option>
+        <option value="click">click</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="viz-section">
+    <div class="viz-toggles">
+      <button class="viz-btn active" data-mode="waves">Waves</button>
+      <button class="viz-btn" data-mode="lissajous">Lissajous</button>
+      <button class="viz-btn" data-mode="geometry">Geometry</button>
+    </div>
+    <canvas id="vizCanvas"></canvas>
+  </div>
+
+  <div class="slider-section">
+    <div class="slider-track">
+      <input type="range" id="freqSlider" min="0" max="1" step="0.001" value="0.5">
+    </div>
+    <div class="slider-labels">
+      <span>Pulse</span>
+      <span>Tone</span>
+    </div>
+  </div>
+
+  <div class="freq-display">
+    <span id="freqValue">31.62</span><span class="freq-unit">Hz</span>
+  </div>
+
+  <div class="buttons-row">
+    <button class="start-btn" id="startBtn">Start</button>
+    <button class="export-btn" id="exportBtn">Export WAV</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  parseRatio — validate and normalize colon-separated integers
+// ============================================================
+function parseRatio(str) {
+  const trimmed = str.trim();
+  if (!trimmed) return { error: 'Enter a ratio' };
+
+  const parts = trimmed.split(':');
+  if (parts.length < 1 || parts.length > 8)
+    return { error: 'Use 1–8 colon-separated values' };
+
+  const nums = [];
+  for (const p of parts) {
+    if (!/^\d+$/.test(p.trim()))
+      return { error: 'Positive integers only' };
+    const n = parseInt(p.trim(), 10);
+    if (n <= 0) return { error: 'No zeros allowed' };
+    nums.push(n);
+  }
+
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+  const overall = nums.reduce((a, b) => gcd(a, b));
+  const normalized = nums.map(n => n / overall);
+
+  return { values: normalized };
+}
+
+// ============================================================
+//  Frequency mapping — log scale from slider position [0,1]
+// ============================================================
+const FREQ_MIN = 0.25;
+const FREQ_MAX = 4000;
+
+function sliderToFreq(t) {
+  return FREQ_MIN * Math.pow(FREQ_MAX / FREQ_MIN, t);
+}
+
+function freqToSlider(f) {
+  return Math.log(f / FREQ_MIN) / Math.log(FREQ_MAX / FREQ_MIN);
+}
+
+function formatFreq(f) {
+  if (f < 10) return f.toFixed(2);
+  if (f < 100) return f.toFixed(1);
+  return Math.round(f).toString();
+}
+
+// ============================================================
+//  Audio Engine
+// ============================================================
+function createAudioEngine() {
+  let ctx = null;
+  let masterGain = null;
+  let limiter = null;
+  let voices = [];
+  let currentRatio = [3, 2];
+  let currentTimbre = 'sine';
+  let currentBaseFreq = 31.62;
+  let running = false;
+
+  function ensureContext() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -3;
+      limiter.knee.value = 6;
+      limiter.ratio.value = 12;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.05;
+      limiter.connect(ctx.destination);
+
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0;
+      masterGain.connect(limiter);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+
+  function destroyVoices() {
+    for (const v of voices) {
+      try {
+        if (v.osc) { v.osc.stop(); v.osc.disconnect(); }
+        if (v.clickInterval != null) clearInterval(v.clickInterval);
+        if (v.gain) v.gain.disconnect();
+      } catch (_) {}
+    }
+    voices = [];
+  }
+
+  function scheduleClick(gainNode, time) {
+    const buf = ctx.createBuffer(1, Math.max(1, Math.ceil(ctx.sampleRate * 0.004)), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = Math.exp(-i / (ctx.sampleRate * 0.001));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(gainNode);
+    src.start(time);
+  }
+
+  function createClickVoice(freq, voiceGain) {
+    const gain = ctx.createGain();
+    gain.gain.value = voiceGain;
+    gain.connect(masterGain);
+
+    let lastClick = ctx.currentTime;
+    scheduleClick(gain, lastClick);
+
+    const interval = setInterval(() => {
+      if (!running) return;
+      const now = ctx.currentTime;
+      const period = 1 / freq;
+      while (lastClick + period <= now + 0.1) {
+        lastClick += period;
+        if (lastClick > now - 0.01) {
+          scheduleClick(gain, Math.max(lastClick, now));
+        }
+      }
+    }, 50);
+
+    return { clickInterval: interval, gain, _freq: freq };
+  }
+
+  function rebuildOscillators() {
+    destroyVoices();
+    if (!running) return;
+
+    const n = currentRatio.length;
+    const rMin = Math.min(...currentRatio);
+    const voiceGain = 1 / n;
+    const startTime = ctx.currentTime + 0.005;
+
+    for (let i = 0; i < n; i++) {
+      const freq = currentBaseFreq * (currentRatio[i] / rMin);
+
+      if (currentTimbre === 'click') {
+        voices.push(createClickVoice(freq, voiceGain));
+      } else {
+        const osc = ctx.createOscillator();
+        osc.type = currentTimbre;
+        osc.frequency.value = freq;
+
+        const gain = ctx.createGain();
+        gain.gain.value = voiceGain;
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(startTime);
+        voices.push({ osc, gain });
+      }
+    }
+  }
+
+  function updateFrequencies(baseFreq) {
+    currentBaseFreq = baseFreq;
+    if (!running || voices.length === 0) return;
+
+    const rMin = Math.min(...currentRatio);
+    const now = ctx.currentTime;
+
+    for (let i = 0; i < voices.length; i++) {
+      const freq = baseFreq * (currentRatio[i] / rMin);
+      const v = voices[i];
+      if (v.osc) {
+        v.osc.frequency.setTargetAtTime(freq, now, 0.02);
+      }
+    }
+
+    if (currentTimbre === 'click') {
+      rebuildOscillators();
+    }
+  }
+
+  function setRatio(ratio) {
+    currentRatio = ratio;
+    if (running) rebuildOscillators();
+  }
+
+  function setTimbre(timbre) {
+    currentTimbre = timbre;
+    if (running) rebuildOscillators();
+  }
+
+  function start() {
+    ensureContext();
+    running = true;
+    masterGain.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
+    rebuildOscillators();
+  }
+
+  function stop() {
+    running = false;
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
+    }
+    setTimeout(destroyVoices, 80);
+  }
+
+  // Expose state for visualization and export
+  function getState() {
+    return {
+      ratio: currentRatio.slice(),
+      timbre: currentTimbre,
+      baseFreq: currentBaseFreq
+    };
+  }
+
+  return { start, stop, setRatio, setTimbre, updateFrequencies, isRunning: () => running, getState };
+}
+
+// ============================================================
+//  Visualization Engine
+// ============================================================
+function visualizationEngine(canvas) {
+  const c = canvas.getContext('2d');
+  let mode = 'waves';
+  let animId = null;
+  let startTime = performance.now();
+
+  // Voice colors — up to 8 distinct hues
+  const COLORS = [
+    '#5a8aff', '#ff5a8a', '#5aff8a', '#ffd55a',
+    '#d55aff', '#5affd5', '#ff8a5a', '#8a5aff'
+  ];
+
+  // State reference — set externally each frame
+  let ratio = [3, 2];
+  let baseFreq = 31.62;
+
+  function setMode(m) { mode = m; }
+
+  function setState(r, f) {
+    ratio = r;
+    baseFreq = f;
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Compute waveform sample value for a given voice at time t
+  // Uses mathematical sine — not FFT
+  function waveSample(voiceIndex, t) {
+    const rMin = Math.min(...ratio);
+    const freq = baseFreq * (ratio[voiceIndex] / rMin);
+    return Math.sin(2 * Math.PI * freq * t);
+  }
+
+  // ---- Mode A: Overlapping Waves ----
+  function drawWaves(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+    const lowestFreq = baseFreq; // rMin/rMin = 1
+    const period = 1 / lowestFreq;
+    const totalTime = 2 * period; // show 2 full periods of lowest
+
+    // Individual waves — top 60%
+    const waveH = h * 0.55;
+    const waveY = 4;
+    const perVoice = waveH / n;
+
+    for (let vi = 0; vi < n; vi++) {
+      const cy = waveY + perVoice * vi + perVoice / 2;
+      const amp = perVoice * 0.38;
+      c.beginPath();
+      c.strokeStyle = COLORS[vi % COLORS.length];
+      c.lineWidth = 1.5;
+      for (let px = 0; px < w; px++) {
+        const st = t + (px / w) * totalTime;
+        const y = cy - waveSample(vi, st) * amp;
+        if (px === 0) c.moveTo(px, y);
+        else c.lineTo(px, y);
+      }
+      c.stroke();
+    }
+
+    // Composite wave — bottom 35%
+    const compY = h * 0.68;
+    const compH = h * 0.28;
+    const compAmp = compH * 0.45;
+    c.beginPath();
+    c.strokeStyle = '#e0e0e8';
+    c.lineWidth = 1.8;
+    for (let px = 0; px < w; px++) {
+      const st = t + (px / w) * totalTime;
+      let sum = 0;
+      for (let vi = 0; vi < n; vi++) sum += waveSample(vi, st);
+      sum /= n;
+      const y = compY + compH / 2 - sum * compAmp;
+      if (px === 0) c.moveTo(px, y);
+      else c.lineTo(px, y);
+    }
+    c.stroke();
+
+    // Separator line
+    c.beginPath();
+    c.strokeStyle = '#1a1a2a';
+    c.lineWidth = 1;
+    c.moveTo(0, h * 0.62);
+    c.lineTo(w, h * 0.62);
+    c.stroke();
+  }
+
+  // ---- Mode B: Lissajous ----
+  function drawLissajous(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) * 0.42;
+    const rMin = Math.min(...ratio);
+    const f1 = baseFreq * (ratio[0] / rMin);
+    const f2 = baseFreq * (ratio.length > 1 ? ratio[1] / rMin : ratio[0] / rMin);
+
+    // High-res parametric curve — draw several recent periods for trail
+    const period = 1 / Math.min(f1, f2);
+    const trailTime = 2 * period;
+    const steps = 2000;
+
+    c.beginPath();
+    c.strokeStyle = '#5a8aff';
+    c.lineWidth = 1.5;
+    for (let i = 0; i <= steps; i++) {
+      const st = t - trailTime + (i / steps) * trailTime;
+      const x = cx + Math.sin(2 * Math.PI * f1 * st) * r;
+      const y = cy + Math.sin(2 * Math.PI * f2 * st) * r;
+      if (i === 0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    }
+    c.stroke();
+
+    // Current point dot
+    const px = cx + Math.sin(2 * Math.PI * f1 * t) * r;
+    const py = cy + Math.sin(2 * Math.PI * f2 * t) * r;
+    c.beginPath();
+    c.fillStyle = '#e0e0e8';
+    c.arc(px, py, 3, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // ---- Mode C: Geometry (Epicyclic rotating vectors) ----
+  function drawGeometry(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+    const maxR = Math.min(w, h) * 0.4;
+    const armLen = maxR / (n + 0.5);
+
+    // Draw each rotating arm from center, chaining vectors
+    let x = cx;
+    let y = cy;
+    const tips = [];
+
+    for (let i = 0; i < n; i++) {
+      const freq = baseFreq * (ratio[i] / rMin);
+      const angle = 2 * Math.PI * freq * t;
+      const len = armLen * (1 - i * 0.08); // slight taper for inner arms
+
+      // Draw arm circle (orbit)
+      c.beginPath();
+      c.strokeStyle = 'rgba(90, 90, 255, 0.12)';
+      c.lineWidth = 1;
+      c.arc(x, y, len, 0, Math.PI * 2);
+      c.stroke();
+
+      // Draw arm
+      const nx = x + Math.cos(angle) * len;
+      const ny = y + Math.sin(angle) * len;
+      c.beginPath();
+      c.strokeStyle = COLORS[i % COLORS.length];
+      c.lineWidth = 1.5;
+      c.moveTo(x, y);
+      c.lineTo(nx, ny);
+      c.stroke();
+
+      // Joint dot
+      c.beginPath();
+      c.fillStyle = COLORS[i % COLORS.length];
+      c.arc(nx, ny, 2.5, 0, Math.PI * 2);
+      c.fill();
+
+      tips.push({ x: nx, y: ny });
+      x = nx;
+      y = ny;
+    }
+
+    // Draw polygon connecting all vector tips
+    if (tips.length >= 2) {
+      c.beginPath();
+      c.strokeStyle = 'rgba(224, 224, 232, 0.35)';
+      c.lineWidth = 1;
+      c.moveTo(tips[0].x, tips[0].y);
+      for (let i = 1; i < tips.length; i++) {
+        c.lineTo(tips[i].x, tips[i].y);
+      }
+      c.closePath();
+      c.stroke();
+
+      // Fill polygon with subtle glow
+      c.fillStyle = 'rgba(90, 90, 255, 0.06)';
+      c.fill();
+    }
+
+    // Trail: draw recent path of final tip
+    const rMinVal = Math.min(...ratio);
+    const lowestFreq = baseFreq;
+    const trailPeriod = 1 / lowestFreq;
+    const trailSteps = 600;
+    c.beginPath();
+    c.strokeStyle = 'rgba(224, 224, 232, 0.15)';
+    c.lineWidth = 1;
+    for (let s = 0; s <= trailSteps; s++) {
+      const st = t - trailPeriod * 2 + (s / trailSteps) * trailPeriod * 2;
+      let tx = cx, ty = cy;
+      for (let i = 0; i < n; i++) {
+        const freq = baseFreq * (ratio[i] / rMinVal);
+        const angle = 2 * Math.PI * freq * st;
+        const len = armLen * (1 - i * 0.08);
+        tx += Math.cos(angle) * len;
+        ty += Math.sin(angle) * len;
+      }
+      if (s === 0) c.moveTo(tx, ty);
+      else c.lineTo(tx, ty);
+    }
+    c.stroke();
+  }
+
+  // Main render loop
+  function render() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    c.clearRect(0, 0, w, h);
+
+    const t = (performance.now() - startTime) / 1000;
+
+    if (mode === 'waves') drawWaves(t);
+    else if (mode === 'lissajous') drawLissajous(t);
+    else if (mode === 'geometry') drawGeometry(t);
+
+    animId = requestAnimationFrame(render);
+  }
+
+  function start() {
+    resize();
+    if (!animId) render();
+  }
+
+  function stop() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+  }
+
+  // Resize on window change
+  window.addEventListener('resize', resize);
+
+  return { setMode, setState, start, stop, getMode: () => mode };
+}
+
+// ============================================================
+//  URL State Manager
+// ============================================================
+function urlStateManager() {
+  // Read state from URL params
+  function read() {
+    const params = new URLSearchParams(window.location.search);
+    const state = {};
+
+    if (params.has('ratio')) {
+      const parts = params.get('ratio').split('-');
+      const nums = parts.map(p => parseInt(p, 10)).filter(n => n > 0 && Number.isFinite(n));
+      if (nums.length >= 1 && nums.length <= 8) {
+        state.ratio = nums.join(':');
+      }
+    }
+
+    if (params.has('freq')) {
+      const f = parseFloat(params.get('freq'));
+      if (f >= FREQ_MIN && f <= FREQ_MAX) state.freq = f;
+    }
+
+    if (params.has('timbre')) {
+      const t = params.get('timbre');
+      if (['sine', 'square', 'triangle', 'sawtooth', 'click'].includes(t)) {
+        state.timbre = t;
+      }
+    }
+
+    if (params.has('viz')) {
+      const v = params.get('viz');
+      if (['waves', 'lissajous', 'geometry'].includes(v)) {
+        state.viz = v;
+      }
+    }
+
+    return state;
+  }
+
+  // Write current state to URL (replaceState, no reload)
+  function write(ratioStr, freq, timbre, vizMode) {
+    const ratioParam = ratioStr.replace(/:/g, '-');
+    const freqParam = formatFreq(freq);
+    const params = new URLSearchParams();
+    params.set('ratio', ratioParam);
+    params.set('freq', freqParam);
+    params.set('timbre', timbre);
+    params.set('viz', vizMode);
+    const url = window.location.pathname + '?' + params.toString();
+    window.history.replaceState(null, '', url);
+  }
+
+  return { read, write };
+}
+
+// ============================================================
+//  Export Engine — Offline render to WAV
+// ============================================================
+function exportEngine() {
+  function renderWAV(ratio, baseFreq, timbre, duration, callback) {
+    const sampleRate = 44100;
+    const length = sampleRate * duration;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    if (timbre === 'click') {
+      // Render click as direct sample generation
+      const buffer = new Float32Array(length);
+      for (let vi = 0; vi < n; vi++) {
+        const freq = baseFreq * (ratio[vi] / rMin);
+        const period = sampleRate / freq;
+        const decaySamples = sampleRate * 0.001;
+        const clickLen = Math.ceil(sampleRate * 0.004);
+        let nextClick = 0;
+        while (nextClick < length) {
+          for (let j = 0; j < clickLen && (nextClick + j) < length; j++) {
+            buffer[Math.floor(nextClick) + j] += Math.exp(-j / decaySamples) / n;
+          }
+          nextClick += period;
+        }
+      }
+      callback(buffer, sampleRate);
+      return;
+    }
+
+    // Use OfflineAudioContext for standard waveforms
+    const offline = new OfflineAudioContext(1, length, sampleRate);
+    const master = offline.createGain();
+    master.gain.value = 1;
+    master.connect(offline.destination);
+
+    for (let i = 0; i < n; i++) {
+      const freq = baseFreq * (ratio[i] / rMin);
+      const osc = offline.createOscillator();
+      osc.type = timbre;
+      osc.frequency.value = freq;
+      const gain = offline.createGain();
+      gain.gain.value = 1 / n;
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(0);
+      osc.stop(duration);
+    }
+
+    offline.startRendering().then(renderedBuffer => {
+      callback(renderedBuffer.getChannelData(0), sampleRate);
+    });
+  }
+
+  // Encode Float32Array to WAV Blob
+  function encodeWAV(samples, sampleRate) {
+    const numSamples = samples.length;
+    const buffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(buffer);
+
+    function writeString(offset, str) {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);           // subchunk size
+    view.setUint16(20, 1, true);            // PCM
+    view.setUint16(22, 1, true);            // mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // byte rate
+    view.setUint16(32, 2, true);            // block align
+    view.setUint16(34, 16, true);           // bits per sample
+    writeString(36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+
+    for (let i = 0; i < numSamples; i++) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  function download(ratio, baseFreq, timbre) {
+    const duration = 10;
+    const ratioStr = ratio.join('-');
+    const freqStr = formatFreq(baseFreq);
+    const filename = `ratio_${ratioStr}_freq_${freqStr}.wav`;
+
+    return new Promise(resolve => {
+      renderWAV(ratio, baseFreq, timbre, duration, (samples, sr) => {
+        const blob = encodeWAV(samples, sr);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        resolve();
+      });
+    });
+  }
+
+  return { download };
+}
+
+// ============================================================
+//  UI Controller
+// ============================================================
+function uiController() {
+  const ratioInput   = document.getElementById('ratioInput');
+  const ratioError   = document.getElementById('ratioError');
+  const timbreSelect = document.getElementById('timbreSelect');
+  const freqSlider   = document.getElementById('freqSlider');
+  const freqValue    = document.getElementById('freqValue');
+  const startBtn     = document.getElementById('startBtn');
+  const exportBtn    = document.getElementById('exportBtn');
+  const vizCanvas    = document.getElementById('vizCanvas');
+  const vizBtns      = document.querySelectorAll('.viz-btn');
+
+  const engine  = createAudioEngine();
+  const viz     = visualizationEngine(vizCanvas);
+  const urlMgr  = urlStateManager();
+  const exporter = exportEngine();
+
+  let currentRatio = [3, 2];
+  let currentBaseFreq = 31.62;
+
+  // --- Restore from URL ---
+  const urlState = urlMgr.read();
+  if (urlState.ratio) ratioInput.value = urlState.ratio;
+  if (urlState.timbre) timbreSelect.value = urlState.timbre;
+  if (urlState.viz) {
+    vizBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === urlState.viz));
+    viz.setMode(urlState.viz);
+  }
+
+  // Parse initial ratio
+  const initResult = parseRatio(ratioInput.value);
+  if (!initResult.error) currentRatio = initResult.values;
+  engine.setRatio(currentRatio);
+  engine.setTimbre(timbreSelect.value);
+
+  // Set initial freq from URL or slider
+  if (urlState.freq) {
+    currentBaseFreq = urlState.freq;
+    freqSlider.value = freqToSlider(urlState.freq);
+  } else {
+    currentBaseFreq = sliderToFreq(parseFloat(freqSlider.value));
+  }
+  freqValue.textContent = formatFreq(currentBaseFreq);
+  engine.updateFrequencies(currentBaseFreq);
+
+  // Start viz
+  viz.setState(currentRatio, currentBaseFreq);
+  viz.start();
+
+  // Sync URL
+  function syncURL() {
+    urlMgr.write(currentRatio.join(':'), currentBaseFreq, timbreSelect.value, viz.getMode());
+  }
+
+  // --- Ratio input ---
+  function handleRatioChange() {
+    const result = parseRatio(ratioInput.value);
+    if (result.error) {
+      ratioInput.classList.add('error');
+      ratioError.textContent = result.error;
+      return;
+    }
+    ratioInput.classList.remove('error');
+    ratioError.textContent = '';
+    currentRatio = result.values;
+    engine.setRatio(currentRatio);
+    viz.setState(currentRatio, currentBaseFreq);
+    syncURL();
+  }
+
+  ratioInput.addEventListener('input', handleRatioChange);
+
+  // --- Timbre ---
+  timbreSelect.addEventListener('change', () => {
+    engine.setTimbre(timbreSelect.value);
+    syncURL();
+  });
+
+  // --- Slider ---
+  function handleSlider() {
+    const t = parseFloat(freqSlider.value);
+    currentBaseFreq = sliderToFreq(t);
+    freqValue.textContent = formatFreq(currentBaseFreq);
+    engine.updateFrequencies(currentBaseFreq);
+    viz.setState(currentRatio, currentBaseFreq);
+    syncURL();
+  }
+
+  freqSlider.addEventListener('input', handleSlider);
+
+  // --- Start/Stop ---
+  startBtn.addEventListener('click', () => {
+    if (engine.isRunning()) {
+      engine.stop();
+      startBtn.textContent = 'Start';
+      startBtn.classList.remove('active');
+    } else {
+      engine.start();
+      startBtn.textContent = 'Stop';
+      startBtn.classList.add('active');
+    }
+  });
+
+  // --- Viz toggles ---
+  vizBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      vizBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      viz.setMode(btn.dataset.mode);
+      syncURL();
+    });
+  });
+
+  // --- Export ---
+  exportBtn.addEventListener('click', () => {
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Rendering…';
+    exporter.download(currentRatio, currentBaseFreq, timbreSelect.value).then(() => {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Export WAV';
+    });
+  });
+}
+
+// Boot
+uiController();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse–Tone Continuum</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e8;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .container {
+    width: 580px;
+    max-width: 95vw;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+
+  /* --- Top Controls --- */
+  .controls-row {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
+
+  label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+
+  input[type="text"], select {
+    background: #16161e;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    color: #e0e0e8;
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 15px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus, select:focus {
+    border-color: #5a5aff;
+  }
+
+  input[type="text"].error {
+    border-color: #ff4444;
+  }
+
+  .error-msg {
+    font-size: 11px;
+    color: #ff4444;
+    min-height: 16px;
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  /* --- Visualization --- */
+  .viz-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .viz-toggles {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .viz-btn {
+    background: #16161e;
+    border: 1px solid #2a2a3a;
+    color: #888;
+    font-family: inherit;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .viz-btn:hover { border-color: #5a5aff; color: #c0c0e0; }
+  .viz-btn.active { background: #5a5aff; border-color: #5a5aff; color: #fff; }
+
+  canvas {
+    width: 100%;
+    height: 320px;
+    border-radius: 8px;
+    background: #0e0e16;
+    display: block;
+  }
+
+  /* --- Slider --- */
+  .slider-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .slider-track {
+    width: 100%;
+    height: 48px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #2a2a4a, #5a5aff);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e0e8;
+    box-shadow: 0 0 10px rgba(90, 90, 255, 0.5);
+    cursor: grab;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e0e0e8;
+    box-shadow: 0 0 10px rgba(90, 90, 255, 0.5);
+    border: none;
+    cursor: grab;
+  }
+
+  input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; }
+  input[type="range"]:active::-moz-range-thumb { cursor: grabbing; }
+
+  .slider-labels {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* --- Frequency Display --- */
+  .freq-display {
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #c0c0ff;
+  }
+
+  .freq-unit {
+    font-size: 14px;
+    color: #666;
+    margin-left: 4px;
+  }
+
+  /* --- Buttons Row --- */
+  .buttons-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .start-btn, .export-btn {
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 10px 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .start-btn { background: #5a5aff; }
+  .start-btn:hover { background: #4a4ae8; }
+  .start-btn.active { background: #ff4466; }
+  .start-btn.active:hover { background: #e83355; }
+
+  .export-btn { background: #2a2a3a; padding: 10px 20px; }
+  .export-btn:hover { background: #3a3a4a; }
+  .export-btn:disabled { opacity: 0.4; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="controls-row">
+    <div class="input-group" style="flex:2">
+      <label for="ratioInput">Enter Ratio (e.g., 3:2 or 7:5:4)</label>
+      <input type="text" id="ratioInput" value="3:2" spellcheck="false" autocomplete="off">
+      <div class="error-msg" id="ratioError"></div>
+    </div>
+    <div class="input-group" style="flex:1">
+      <label for="timbreSelect">Timbre</label>
+      <select id="timbreSelect">
+        <option value="sine">sine</option>
+        <option value="square">square</option>
+        <option value="triangle">triangle</option>
+        <option value="sawtooth">sawtooth</option>
+        <option value="click">click</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="viz-section">
+    <div class="viz-toggles">
+      <button class="viz-btn active" data-mode="waves">Waves</button>
+      <button class="viz-btn" data-mode="lissajous">Lissajous</button>
+      <button class="viz-btn" data-mode="geometry">Geometry</button>
+      <button class="viz-btn" data-mode="spirograph">Spirograph</button>
+      <button class="viz-btn" data-mode="harmonograph">Harmonograph</button>
+      <button class="viz-btn" data-mode="cymatic">Cymatic</button>
+      <button class="viz-btn" data-mode="ring">Ring</button>
+      <button class="viz-btn" data-mode="web">Web</button>
+    </div>
+    <canvas id="vizCanvas"></canvas>
+  </div>
+
+  <div class="slider-section">
+    <div class="slider-track">
+      <input type="range" id="freqSlider" min="0" max="1" step="0.001" value="0.5">
+    </div>
+    <div class="slider-labels">
+      <span>Pulse</span>
+      <span>Tone</span>
+    </div>
+  </div>
+
+  <div class="freq-display">
+    <span id="freqValue">31.62</span><span class="freq-unit">Hz</span>
+  </div>
+
+  <div class="buttons-row">
+    <button class="start-btn" id="startBtn">Start</button>
+    <button class="export-btn" id="exportBtn">Export WAV</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  parseRatio — validate and normalize colon-separated integers
+// ============================================================
+function parseRatio(str) {
+  const trimmed = str.trim();
+  if (!trimmed) return { error: 'Enter a ratio' };
+
+  const parts = trimmed.split(':');
+  if (parts.length < 1 || parts.length > 8)
+    return { error: 'Use 1–8 colon-separated values' };
+
+  const nums = [];
+  for (const p of parts) {
+    if (!/^\d+$/.test(p.trim()))
+      return { error: 'Positive integers only' };
+    const n = parseInt(p.trim(), 10);
+    if (n <= 0) return { error: 'No zeros allowed' };
+    nums.push(n);
+  }
+
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+  const overall = nums.reduce((a, b) => gcd(a, b));
+  const normalized = nums.map(n => n / overall);
+
+  return { values: normalized };
+}
+
+// ============================================================
+//  Frequency mapping — log scale from slider position [0,1]
+// ============================================================
+const FREQ_MIN = 0.25;
+const FREQ_MAX = 4000;
+
+function sliderToFreq(t) {
+  return FREQ_MIN * Math.pow(FREQ_MAX / FREQ_MIN, t);
+}
+
+function freqToSlider(f) {
+  return Math.log(f / FREQ_MIN) / Math.log(FREQ_MAX / FREQ_MIN);
+}
+
+function formatFreq(f) {
+  if (f < 10) return f.toFixed(2);
+  if (f < 100) return f.toFixed(1);
+  return Math.round(f).toString();
+}
+
+// ============================================================
+//  Audio Engine
+// ============================================================
+function createAudioEngine() {
+  let ctx = null;
+  let masterGain = null;
+  let limiter = null;
+  let voices = [];
+  let currentRatio = [3, 2];
+  let currentTimbre = 'sine';
+  let currentBaseFreq = 31.62;
+  let running = false;
+
+  function ensureContext() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -3;
+      limiter.knee.value = 6;
+      limiter.ratio.value = 12;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.05;
+      limiter.connect(ctx.destination);
+
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0;
+      masterGain.connect(limiter);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+
+  function destroyVoices() {
+    for (const v of voices) {
+      try {
+        if (v.osc) { v.osc.stop(); v.osc.disconnect(); }
+        if (v.clickInterval != null) clearInterval(v.clickInterval);
+        if (v.gain) v.gain.disconnect();
+      } catch (_) {}
+    }
+    voices = [];
+  }
+
+  function scheduleClick(gainNode, time) {
+    const buf = ctx.createBuffer(1, Math.max(1, Math.ceil(ctx.sampleRate * 0.004)), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = Math.exp(-i / (ctx.sampleRate * 0.001));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(gainNode);
+    src.start(time);
+  }
+
+  function createClickVoice(freq, voiceGain) {
+    const gain = ctx.createGain();
+    gain.gain.value = voiceGain;
+    gain.connect(masterGain);
+
+    let lastClick = ctx.currentTime;
+    scheduleClick(gain, lastClick);
+
+    const interval = setInterval(() => {
+      if (!running) return;
+      const now = ctx.currentTime;
+      const period = 1 / freq;
+      while (lastClick + period <= now + 0.1) {
+        lastClick += period;
+        if (lastClick > now - 0.01) {
+          scheduleClick(gain, Math.max(lastClick, now));
+        }
+      }
+    }, 50);
+
+    return { clickInterval: interval, gain, _freq: freq };
+  }
+
+  function rebuildOscillators() {
+    destroyVoices();
+    if (!running) return;
+
+    const n = currentRatio.length;
+    const rMin = Math.min(...currentRatio);
+    const voiceGain = 1 / n;
+    const startTime = ctx.currentTime + 0.005;
+
+    for (let i = 0; i < n; i++) {
+      const freq = currentBaseFreq * (currentRatio[i] / rMin);
+
+      if (currentTimbre === 'click') {
+        voices.push(createClickVoice(freq, voiceGain));
+      } else {
+        const osc = ctx.createOscillator();
+        osc.type = currentTimbre;
+        osc.frequency.value = freq;
+
+        const gain = ctx.createGain();
+        gain.gain.value = voiceGain;
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(startTime);
+        voices.push({ osc, gain });
+      }
+    }
+  }
+
+  function updateFrequencies(baseFreq) {
+    currentBaseFreq = baseFreq;
+    if (!running || voices.length === 0) return;
+
+    const rMin = Math.min(...currentRatio);
+    const now = ctx.currentTime;
+
+    for (let i = 0; i < voices.length; i++) {
+      const freq = baseFreq * (currentRatio[i] / rMin);
+      const v = voices[i];
+      if (v.osc) {
+        v.osc.frequency.setTargetAtTime(freq, now, 0.02);
+      }
+    }
+
+    if (currentTimbre === 'click') {
+      rebuildOscillators();
+    }
+  }
+
+  function setRatio(ratio) {
+    currentRatio = ratio;
+    if (running) rebuildOscillators();
+  }
+
+  function setTimbre(timbre) {
+    currentTimbre = timbre;
+    if (running) rebuildOscillators();
+  }
+
+  function start() {
+    ensureContext();
+    running = true;
+    masterGain.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
+    rebuildOscillators();
+  }
+
+  function stop() {
+    running = false;
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
+    }
+    setTimeout(destroyVoices, 80);
+  }
+
+  function getState() {
+    return {
+      ratio: currentRatio.slice(),
+      timbre: currentTimbre,
+      baseFreq: currentBaseFreq
+    };
+  }
+
+  return { start, stop, setRatio, setTimbre, updateFrequencies, isRunning: () => running, getState };
+}
+
+// ============================================================
+//  All visualization modes
+// ============================================================
+const VIZ_MODES = [
+  'waves', 'lissajous', 'geometry',
+  'spirograph', 'harmonograph', 'cymatic', 'ring', 'web'
+];
+
+// ============================================================
+//  Visualization Engine
+// ============================================================
+function visualizationEngine(canvas) {
+  const c = canvas.getContext('2d');
+  let mode = 'waves';
+  let animId = null;
+  let startTime = performance.now();
+
+  const COLORS = [
+    '#5a8aff', '#ff5a8a', '#5aff8a', '#ffd55a',
+    '#d55aff', '#5affd5', '#ff8a5a', '#8a5aff'
+  ];
+
+  let ratio = [3, 2];
+  let baseFreq = 31.62;
+
+  function setMode(m) { mode = m; }
+  function setState(r, f) { ratio = r; baseFreq = f; }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Helper: get frequency for voice index
+  function voiceFreq(i) {
+    const rMin = Math.min(...ratio);
+    return baseFreq * (ratio[i] / rMin);
+  }
+
+  // Slow-down factor: cap visual angular velocity for readability
+  // At high audio freqs, divide time so patterns remain visible
+  function vizTime(t) {
+    // Clamp effective viz frequency to ~3 Hz base for geometric modes
+    const cap = 3;
+    if (baseFreq <= cap) return t;
+    return t * (cap / baseFreq);
+  }
+
+  // ---- Mode A: Overlapping Sine Waves ----
+  function drawWaves(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const n = ratio.length;
+    const lowestFreq = baseFreq;
+    const period = 1 / lowestFreq;
+    const totalTime = 2 * period;
+
+    // Top region: overlaid individual waves
+    const waveH = h * 0.55;
+    const waveCy = waveH / 2 + 4;
+    const amp = waveH * 0.38;
+
+    for (let vi = 0; vi < n; vi++) {
+      const freq = voiceFreq(vi);
+      c.beginPath();
+      c.strokeStyle = COLORS[vi % COLORS.length];
+      c.lineWidth = 1.6;
+      c.globalAlpha = 0.8;
+      for (let px = 0; px < w; px++) {
+        const st = t + (px / w) * totalTime;
+        const y = waveCy - Math.sin(2 * Math.PI * freq * st) * amp;
+        if (px === 0) c.moveTo(px, y);
+        else c.lineTo(px, y);
+      }
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+
+    // Separator
+    c.beginPath();
+    c.strokeStyle = '#1a1a2a';
+    c.lineWidth = 1;
+    const sepY = h * 0.6;
+    c.moveTo(0, sepY);
+    c.lineTo(w, sepY);
+    c.stroke();
+
+    // Bottom region: composite wave
+    const compCy = h * 0.6 + (h * 0.38) / 2;
+    const compAmp = h * 0.38 * 0.42;
+    c.beginPath();
+    c.strokeStyle = '#e0e0e8';
+    c.lineWidth = 2;
+    for (let px = 0; px < w; px++) {
+      const st = t + (px / w) * totalTime;
+      let sum = 0;
+      for (let vi = 0; vi < n; vi++) {
+        sum += Math.sin(2 * Math.PI * voiceFreq(vi) * st);
+      }
+      sum /= n;
+      const y = compCy - sum * compAmp;
+      if (px === 0) c.moveTo(px, y);
+      else c.lineTo(px, y);
+    }
+    c.stroke();
+  }
+
+  // ---- Mode B: Lissajous (multi-voice, phase-shifted, fading trail) ----
+  function drawLissajous(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) * 0.44;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    // Compose X from odd-indexed voices, Y from even-indexed
+    // With phase offsets based on voice index for variety
+    function lissX(st) {
+      let sum = 0;
+      for (let i = 0; i < n; i++) {
+        const freq = baseFreq * (ratio[i] / rMin);
+        const phase = (i * Math.PI) / n; // spread phases
+        const weight = 1 / (1 + Math.floor(i / 2)); // taper weight
+        sum += Math.sin(2 * Math.PI * freq * st + phase) * weight;
+      }
+      // Normalize
+      let norm = 0;
+      for (let i = 0; i < n; i++) norm += 1 / (1 + Math.floor(i / 2));
+      return sum / norm;
+    }
+
+    function lissY(st) {
+      let sum = 0;
+      for (let i = 0; i < n; i++) {
+        const freq = baseFreq * (ratio[i] / rMin);
+        const phase = ((i + 1) * Math.PI * 0.5) / n;
+        const weight = 1 / (1 + Math.floor((i + 1) / 2));
+        sum += Math.cos(2 * Math.PI * freq * st + phase) * weight;
+      }
+      let norm = 0;
+      for (let i = 0; i < n; i++) norm += 1 / (1 + Math.floor((i + 1) / 2));
+      return sum / norm;
+    }
+
+    const lowestFreq = baseFreq;
+    const period = 1 / lowestFreq;
+    const trailTime = 4 * period;
+    const steps = 3000;
+
+    // Draw fading trail
+    for (let seg = 0; seg < steps; seg++) {
+      const frac0 = seg / steps;
+      const frac1 = (seg + 1) / steps;
+      const st0 = t - trailTime + frac0 * trailTime;
+      const st1 = t - trailTime + frac1 * trailTime;
+      const x0 = cx + lissX(st0) * R;
+      const y0 = cy + lissY(st0) * R;
+      const x1 = cx + lissX(st1) * R;
+      const y1 = cy + lissY(st1) * R;
+
+      const alpha = frac0 * frac0; // quadratic fade-in
+      c.beginPath();
+      c.strokeStyle = `rgba(90, 138, 255, ${alpha * 0.9})`;
+      c.lineWidth = 1 + alpha * 1.5;
+      c.moveTo(x0, y0);
+      c.lineTo(x1, y1);
+      c.stroke();
+    }
+
+    // Bright current point
+    const px = cx + lissX(t) * R;
+    const py = cy + lissY(t) * R;
+    c.beginPath();
+    c.fillStyle = '#e0e0e8';
+    c.shadowColor = '#5a8aff';
+    c.shadowBlur = 12;
+    c.arc(px, py, 4, 0, Math.PI * 2);
+    c.fill();
+    c.shadowBlur = 0;
+  }
+
+  // ---- Mode C: Geometry (Epicyclic) — larger + slowed ----
+  function drawGeometry(t) {
+    const vt = vizTime(t); // slowed time
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+    const maxR = Math.min(w, h) * 0.47;
+    const armLen = maxR / (n + 0.3);
+
+    // Chain rotating arms
+    let x = cx;
+    let y = cy;
+    const tips = [];
+
+    for (let i = 0; i < n; i++) {
+      const freq = baseFreq * (ratio[i] / rMin);
+      const angle = 2 * Math.PI * freq * vt;
+      const len = armLen * (1 - i * 0.05);
+
+      // Orbit circle
+      c.beginPath();
+      c.strokeStyle = 'rgba(90, 90, 255, 0.1)';
+      c.lineWidth = 1;
+      c.arc(x, y, len, 0, Math.PI * 2);
+      c.stroke();
+
+      const nx = x + Math.cos(angle) * len;
+      const ny = y + Math.sin(angle) * len;
+
+      // Arm line
+      c.beginPath();
+      c.strokeStyle = COLORS[i % COLORS.length];
+      c.lineWidth = 2;
+      c.moveTo(x, y);
+      c.lineTo(nx, ny);
+      c.stroke();
+
+      // Joint dot
+      c.beginPath();
+      c.fillStyle = COLORS[i % COLORS.length];
+      c.arc(nx, ny, 3, 0, Math.PI * 2);
+      c.fill();
+
+      tips.push({ x: nx, y: ny });
+      x = nx;
+      y = ny;
+    }
+
+    // Polygon through tips
+    if (tips.length >= 2) {
+      c.beginPath();
+      c.strokeStyle = 'rgba(224, 224, 232, 0.35)';
+      c.lineWidth = 1;
+      c.moveTo(tips[0].x, tips[0].y);
+      for (let i = 1; i < tips.length; i++) c.lineTo(tips[i].x, tips[i].y);
+      c.closePath();
+      c.stroke();
+      c.fillStyle = 'rgba(90, 90, 255, 0.06)';
+      c.fill();
+    }
+
+    // Trail of final tip — longer trail, slowed
+    const lowestFreq = baseFreq;
+    const trailPeriod = 1 / lowestFreq;
+    const trailSteps = 1200;
+    const trailLen = trailPeriod * 4;
+    c.beginPath();
+    for (let s = 0; s <= trailSteps; s++) {
+      const st = vizTime(t - trailLen + (s / trailSteps) * trailLen);
+      let tx = cx, ty = cy;
+      for (let i = 0; i < n; i++) {
+        const freq = baseFreq * (ratio[i] / rMin);
+        const angle = 2 * Math.PI * freq * st;
+        const len = armLen * (1 - i * 0.05);
+        tx += Math.cos(angle) * len;
+        ty += Math.sin(angle) * len;
+      }
+      const alpha = (s / trailSteps) * 0.3;
+      if (s === 0) {
+        c.strokeStyle = `rgba(224, 224, 232, ${alpha})`;
+        c.lineWidth = 1;
+        c.moveTo(tx, ty);
+      } else {
+        c.lineTo(tx, ty);
+      }
+    }
+    c.strokeStyle = 'rgba(224, 224, 232, 0.25)';
+    c.stroke();
+  }
+
+  // ---- Mode D: Spirograph ----
+  // Hypotrochoid: each ratio pair defines R/r relationship
+  function drawSpirograph(t) {
+    const vt = vizTime(t);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const scale = Math.min(w, h) * 0.44;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    // Use ratio values as hypotrochoid parameters
+    // R = sum of ratios, r = each ratio component
+    const R = ratio.reduce((a, b) => a + b, 0);
+    const d = R * 0.6; // pen distance
+
+    const steps = 4000;
+    // Full pattern repeats after LCM-related period
+    const lcmPeriod = R / rMin;
+    const totalAngle = lcmPeriod * 2 * Math.PI;
+    const phaseOffset = vt * 2 * Math.PI * 0.3; // slow rotation
+
+    for (let vi = 0; vi < Math.min(n, 4); vi++) {
+      const r = ratio[vi];
+      c.beginPath();
+      c.strokeStyle = COLORS[vi % COLORS.length];
+      c.lineWidth = 1.2;
+      c.globalAlpha = 0.7;
+
+      for (let s = 0; s <= steps; s++) {
+        const theta = (s / steps) * totalAngle + phaseOffset;
+        const x = cx + ((R - r) * Math.cos(theta) + d * Math.cos(((R - r) / r) * theta)) * scale / (R + d);
+        const y = cy + ((R - r) * Math.sin(theta) - d * Math.sin(((R - r) / r) * theta)) * scale / (R + d);
+        if (s === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      }
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+
+    // Draw pen position for first voice
+    const r0 = ratio[0];
+    const theta = phaseOffset + vt * 2;
+    const px = cx + ((R - r0) * Math.cos(theta) + d * Math.cos(((R - r0) / r0) * theta)) * scale / (R + d);
+    const py = cy + ((R - r0) * Math.sin(theta) - d * Math.sin(((R - r0) / r0) * theta)) * scale / (R + d);
+    c.beginPath();
+    c.fillStyle = '#e0e0e8';
+    c.arc(px, py, 3, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // ---- Mode E: Harmonograph (damped pendulum traces) ----
+  function drawHarmonograph(t) {
+    const vt = vizTime(t);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const scale = Math.min(w, h) * 0.44;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    // Composite X and Y from alternating voice assignments
+    // Apply gentle damping for harmonograph aesthetic
+    const totalTime = 30; // seconds of simulated trace
+    const steps = 5000;
+    const dampBase = 0.03;
+
+    c.beginPath();
+    for (let s = 0; s <= steps; s++) {
+      const st = (s / steps) * totalTime;
+      const damp = Math.exp(-dampBase * st);
+      let xSum = 0, ySum = 0;
+
+      for (let i = 0; i < n; i++) {
+        const freq = ratio[i] / rMin;
+        const phase = (i * Math.PI * 0.7);
+        const a = damp / Math.sqrt(n);
+        if (i % 2 === 0) {
+          xSum += a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + phase + vt * 0.5);
+        } else {
+          ySum += a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + phase + vt * 0.5);
+        }
+      }
+      // If only one voice, use it for both axes with phase offset
+      if (n === 1) {
+        const freq = 1;
+        const a = damp;
+        xSum = a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + vt * 0.5);
+        ySum = a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + Math.PI * 0.5 + vt * 0.5);
+      }
+      // If odd count, last voice contributes to Y
+      if (n > 1 && n % 2 === 1) {
+        const freq = ratio[n - 1] / rMin;
+        const a = damp / Math.sqrt(n);
+        ySum += a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + vt * 0.5);
+      }
+
+      const x = cx + xSum * scale;
+      const y = cy + ySum * scale;
+
+      const alpha = (1 - s / steps) * 0.8 + 0.1;
+      if (s === 0) {
+        c.moveTo(x, y);
+        c.strokeStyle = `rgba(90, 138, 255, ${alpha})`;
+        c.lineWidth = 1.3;
+      } else {
+        c.lineTo(x, y);
+      }
+    }
+    c.strokeStyle = 'rgba(90, 138, 255, 0.6)';
+    c.lineWidth = 1;
+    c.stroke();
+
+    // Brighter recent portion
+    c.beginPath();
+    const recentSteps = 600;
+    for (let s = 0; s <= recentSteps; s++) {
+      const st = (s / recentSteps) * totalTime * 0.1;
+      const damp = Math.exp(-dampBase * st);
+      let xSum = 0, ySum = 0;
+      for (let i = 0; i < n; i++) {
+        const freq = ratio[i] / rMin;
+        const phase = (i * Math.PI * 0.7);
+        const a = damp / Math.sqrt(n);
+        if (i % 2 === 0) xSum += a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + phase + vt * 0.5);
+        else ySum += a * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + phase + vt * 0.5);
+      }
+      if (n === 1) {
+        xSum = damp * Math.sin(st * 2 * Math.PI / totalTime * 8 + vt * 0.5);
+        ySum = damp * Math.sin(st * 2 * Math.PI / totalTime * 8 + Math.PI * 0.5 + vt * 0.5);
+      }
+      if (n > 1 && n % 2 === 1) {
+        const freq = ratio[n - 1] / rMin;
+        ySum += (damp / Math.sqrt(n)) * Math.sin(freq * st * 2 * Math.PI / totalTime * 8 + vt * 0.5);
+      }
+      const x = cx + xSum * scale;
+      const y = cy + ySum * scale;
+      if (s === 0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    }
+    c.strokeStyle = '#c0c0ff';
+    c.lineWidth = 1.5;
+    c.stroke();
+  }
+
+  // ---- Mode F: Cymatic (radial standing wave, Chladni-like) ----
+  function drawCymatic(t) {
+    const vt = vizTime(t);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = Math.min(w, h) * 0.46;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    // Draw concentric modulated rings
+    const ringCount = 40;
+    for (let ri = 1; ri <= ringCount; ri++) {
+      const rFrac = ri / ringCount;
+      const ringR = rFrac * maxR;
+      const segments = 360;
+
+      c.beginPath();
+      for (let s = 0; s <= segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+
+        // Modulate radius by each voice's standing wave pattern
+        let mod = 0;
+        for (let vi = 0; vi < n; vi++) {
+          const k = ratio[vi] / rMin; // mode number
+          // Radial: Bessel-like (use sin approximation)
+          const radial = Math.cos(k * Math.PI * rFrac + vt * k * 0.8);
+          // Angular: integer mode
+          const angular = Math.sin(k * angle + vt * 0.3 * vi);
+          mod += radial * angular / n;
+        }
+
+        const displacement = mod * maxR * 0.06;
+        const r = ringR + displacement;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (s === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      }
+      c.closePath();
+
+      const brightness = Math.abs(Math.sin(rFrac * Math.PI * 2));
+      const alpha = 0.15 + brightness * 0.2;
+      c.strokeStyle = `rgba(90, 138, 255, ${alpha})`;
+      c.lineWidth = 1;
+      c.stroke();
+    }
+
+    // Nodal lines — radial lines where patterns cancel
+    for (let vi = 0; vi < n; vi++) {
+      const k = ratio[vi] / rMin;
+      const lineCount = Math.round(k * 2);
+      for (let li = 0; li < lineCount; li++) {
+        const angle = (li / lineCount) * Math.PI * 2 + vt * 0.3 * vi;
+        c.beginPath();
+        c.strokeStyle = COLORS[vi % COLORS.length];
+        c.globalAlpha = 0.12;
+        c.lineWidth = 1;
+        c.moveTo(cx, cy);
+        c.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR);
+        c.stroke();
+      }
+    }
+    c.globalAlpha = 1;
+  }
+
+  // ---- Mode G: Ring (circular waveform per voice) ----
+  function drawRing(t) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+    const baseR = Math.min(w, h) * 0.28;
+    const ampR = Math.min(w, h) * 0.12;
+    const segments = 500;
+
+    // Draw each voice as a ring modulated by its frequency
+    for (let vi = 0; vi < n; vi++) {
+      const freq = voiceFreq(vi);
+      const ringOffset = baseR + (vi - (n - 1) / 2) * (ampR * 0.5 / Math.max(n - 1, 1));
+
+      c.beginPath();
+      c.strokeStyle = COLORS[vi % COLORS.length];
+      c.lineWidth = 1.8;
+      c.globalAlpha = 0.75;
+
+      for (let s = 0; s <= segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+        // Waveform wraps around the circle
+        const wave = Math.sin(2 * Math.PI * freq * t + angle * (ratio[vi] / rMin) * 4);
+        const r = ringOffset + wave * ampR * 0.3;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (s === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      }
+      c.closePath();
+      c.stroke();
+    }
+
+    // Composite ring
+    c.beginPath();
+    c.strokeStyle = '#e0e0e8';
+    c.lineWidth = 2;
+    c.globalAlpha = 0.9;
+    for (let s = 0; s <= segments; s++) {
+      const angle = (s / segments) * Math.PI * 2;
+      let sum = 0;
+      for (let vi = 0; vi < n; vi++) {
+        const freq = voiceFreq(vi);
+        sum += Math.sin(2 * Math.PI * freq * t + angle * (ratio[vi] / rMin) * 4);
+      }
+      sum /= n;
+      const r = baseR + sum * ampR * 0.4;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (s === 0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    }
+    c.closePath();
+    c.stroke();
+    c.globalAlpha = 1;
+  }
+
+  // ---- Mode H: Web (radial polygon with frequency-modulated vertices) ----
+  function drawWeb(t) {
+    const vt = vizTime(t);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxR = Math.min(w, h) * 0.44;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    // Number of spokes = LCM-ish of ratio values, capped
+    const spokeCount = Math.min(ratio.reduce((a, b) => a + b, 0) * 2, 48);
+    const layers = 8;
+
+    // Draw spokes
+    for (let s = 0; s < spokeCount; s++) {
+      const angle = (s / spokeCount) * Math.PI * 2;
+      c.beginPath();
+      c.strokeStyle = 'rgba(90, 90, 255, 0.07)';
+      c.lineWidth = 1;
+      c.moveTo(cx, cy);
+      c.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR);
+      c.stroke();
+    }
+
+    // Draw modulated polygon layers
+    for (let layer = 1; layer <= layers; layer++) {
+      const layerFrac = layer / layers;
+      const layerR = layerFrac * maxR;
+
+      c.beginPath();
+      for (let s = 0; s <= spokeCount; s++) {
+        const si = s % spokeCount;
+        const angle = (si / spokeCount) * Math.PI * 2;
+
+        // Each voice modulates the radius at its frequency
+        let mod = 0;
+        for (let vi = 0; vi < n; vi++) {
+          const k = ratio[vi] / rMin;
+          mod += Math.sin(k * angle * 2 + vt * k * 1.2 + vi * 0.5) / n;
+        }
+
+        const r = layerR * (1 + mod * 0.25);
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (s === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      }
+      c.closePath();
+
+      // Color by layer
+      const hue = 230 + layer * 15;
+      const alpha = 0.15 + layerFrac * 0.35;
+      c.strokeStyle = `hsla(${hue}, 70%, 65%, ${alpha})`;
+      c.lineWidth = 1 + layerFrac;
+      c.stroke();
+
+      // Subtle fill on outer layers
+      if (layer >= layers - 1) {
+        c.fillStyle = `hsla(${hue}, 70%, 50%, 0.04)`;
+        c.fill();
+      }
+    }
+
+    // Draw vertex dots on outermost layer
+    for (let s = 0; s < spokeCount; s++) {
+      const angle = (s / spokeCount) * Math.PI * 2;
+      let mod = 0;
+      for (let vi = 0; vi < n; vi++) {
+        const k = ratio[vi] / rMin;
+        mod += Math.sin(k * angle * 2 + vt * k * 1.2 + vi * 0.5) / n;
+      }
+      const r = maxR * (1 + mod * 0.25);
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+
+      c.beginPath();
+      c.fillStyle = 'rgba(224, 224, 232, 0.4)';
+      c.arc(x, y, 2, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  // ---- Main render loop ----
+  function render() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    c.clearRect(0, 0, w, h);
+
+    const t = (performance.now() - startTime) / 1000;
+
+    switch (mode) {
+      case 'waves':        drawWaves(t); break;
+      case 'lissajous':    drawLissajous(t); break;
+      case 'geometry':     drawGeometry(t); break;
+      case 'spirograph':   drawSpirograph(t); break;
+      case 'harmonograph':  drawHarmonograph(t); break;
+      case 'cymatic':      drawCymatic(t); break;
+      case 'ring':         drawRing(t); break;
+      case 'web':          drawWeb(t); break;
+    }
+
+    animId = requestAnimationFrame(render);
+  }
+
+  function start() {
+    resize();
+    if (!animId) render();
+  }
+
+  function stop() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+  }
+
+  window.addEventListener('resize', resize);
+
+  return { setMode, setState, start, stop, getMode: () => mode };
+}
+
+// ============================================================
+//  URL State Manager
+// ============================================================
+function urlStateManager() {
+  function read() {
+    const params = new URLSearchParams(window.location.search);
+    const state = {};
+
+    if (params.has('ratio')) {
+      const parts = params.get('ratio').split('-');
+      const nums = parts.map(p => parseInt(p, 10)).filter(n => n > 0 && Number.isFinite(n));
+      if (nums.length >= 1 && nums.length <= 8) {
+        state.ratio = nums.join(':');
+      }
+    }
+
+    if (params.has('freq')) {
+      const f = parseFloat(params.get('freq'));
+      if (f >= FREQ_MIN && f <= FREQ_MAX) state.freq = f;
+    }
+
+    if (params.has('timbre')) {
+      const t = params.get('timbre');
+      if (['sine', 'square', 'triangle', 'sawtooth', 'click'].includes(t)) {
+        state.timbre = t;
+      }
+    }
+
+    if (params.has('viz')) {
+      const v = params.get('viz');
+      if (VIZ_MODES.includes(v)) {
+        state.viz = v;
+      }
+    }
+
+    return state;
+  }
+
+  function write(ratioStr, freq, timbre, vizMode) {
+    const ratioParam = ratioStr.replace(/:/g, '-');
+    const freqParam = formatFreq(freq);
+    const params = new URLSearchParams();
+    params.set('ratio', ratioParam);
+    params.set('freq', freqParam);
+    params.set('timbre', timbre);
+    params.set('viz', vizMode);
+    const url = window.location.pathname + '?' + params.toString();
+    window.history.replaceState(null, '', url);
+  }
+
+  return { read, write };
+}
+
+// ============================================================
+//  Export Engine — Offline render to WAV
+// ============================================================
+function exportEngine() {
+  function renderWAV(ratio, baseFreq, timbre, duration, callback) {
+    const sampleRate = 44100;
+    const length = sampleRate * duration;
+    const n = ratio.length;
+    const rMin = Math.min(...ratio);
+
+    if (timbre === 'click') {
+      const buffer = new Float32Array(length);
+      for (let vi = 0; vi < n; vi++) {
+        const freq = baseFreq * (ratio[vi] / rMin);
+        const period = sampleRate / freq;
+        const decaySamples = sampleRate * 0.001;
+        const clickLen = Math.ceil(sampleRate * 0.004);
+        let nextClick = 0;
+        while (nextClick < length) {
+          for (let j = 0; j < clickLen && (nextClick + j) < length; j++) {
+            buffer[Math.floor(nextClick) + j] += Math.exp(-j / decaySamples) / n;
+          }
+          nextClick += period;
+        }
+      }
+      callback(buffer, sampleRate);
+      return;
+    }
+
+    const offline = new OfflineAudioContext(1, length, sampleRate);
+    const master = offline.createGain();
+    master.gain.value = 1;
+    master.connect(offline.destination);
+
+    for (let i = 0; i < n; i++) {
+      const freq = baseFreq * (ratio[i] / rMin);
+      const osc = offline.createOscillator();
+      osc.type = timbre;
+      osc.frequency.value = freq;
+      const gain = offline.createGain();
+      gain.gain.value = 1 / n;
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(0);
+      osc.stop(duration);
+    }
+
+    offline.startRendering().then(renderedBuffer => {
+      callback(renderedBuffer.getChannelData(0), sampleRate);
+    });
+  }
+
+  function encodeWAV(samples, sampleRate) {
+    const numSamples = samples.length;
+    const buffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(buffer);
+
+    function writeString(offset, str) {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+
+    for (let i = 0; i < numSamples; i++) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  function download(ratio, baseFreq, timbre) {
+    const duration = 10;
+    const ratioStr = ratio.join('-');
+    const freqStr = formatFreq(baseFreq);
+    const filename = `ratio_${ratioStr}_freq_${freqStr}.wav`;
+
+    return new Promise(resolve => {
+      renderWAV(ratio, baseFreq, timbre, duration, (samples, sr) => {
+        const blob = encodeWAV(samples, sr);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        resolve();
+      });
+    });
+  }
+
+  return { download };
+}
+
+// ============================================================
+//  UI Controller
+// ============================================================
+function uiController() {
+  const ratioInput   = document.getElementById('ratioInput');
+  const ratioError   = document.getElementById('ratioError');
+  const timbreSelect = document.getElementById('timbreSelect');
+  const freqSlider   = document.getElementById('freqSlider');
+  const freqValue    = document.getElementById('freqValue');
+  const startBtn     = document.getElementById('startBtn');
+  const exportBtn    = document.getElementById('exportBtn');
+  const vizCanvas    = document.getElementById('vizCanvas');
+  const vizBtns      = document.querySelectorAll('.viz-btn');
+
+  const engine   = createAudioEngine();
+  const viz      = visualizationEngine(vizCanvas);
+  const urlMgr   = urlStateManager();
+  const exporter = exportEngine();
+
+  let currentRatio = [3, 2];
+  let currentBaseFreq = 31.62;
+
+  // --- Restore from URL ---
+  const urlState = urlMgr.read();
+  if (urlState.ratio) ratioInput.value = urlState.ratio;
+  if (urlState.timbre) timbreSelect.value = urlState.timbre;
+  if (urlState.viz) {
+    vizBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === urlState.viz));
+    viz.setMode(urlState.viz);
+  }
+
+  const initResult = parseRatio(ratioInput.value);
+  if (!initResult.error) currentRatio = initResult.values;
+  engine.setRatio(currentRatio);
+  engine.setTimbre(timbreSelect.value);
+
+  if (urlState.freq) {
+    currentBaseFreq = urlState.freq;
+    freqSlider.value = freqToSlider(urlState.freq);
+  } else {
+    currentBaseFreq = sliderToFreq(parseFloat(freqSlider.value));
+  }
+  freqValue.textContent = formatFreq(currentBaseFreq);
+  engine.updateFrequencies(currentBaseFreq);
+
+  viz.setState(currentRatio, currentBaseFreq);
+  viz.start();
+
+  function syncURL() {
+    urlMgr.write(currentRatio.join(':'), currentBaseFreq, timbreSelect.value, viz.getMode());
+  }
+
+  function handleRatioChange() {
+    const result = parseRatio(ratioInput.value);
+    if (result.error) {
+      ratioInput.classList.add('error');
+      ratioError.textContent = result.error;
+      return;
+    }
+    ratioInput.classList.remove('error');
+    ratioError.textContent = '';
+    currentRatio = result.values;
+    engine.setRatio(currentRatio);
+    viz.setState(currentRatio, currentBaseFreq);
+    syncURL();
+  }
+
+  ratioInput.addEventListener('input', handleRatioChange);
+
+  timbreSelect.addEventListener('change', () => {
+    engine.setTimbre(timbreSelect.value);
+    syncURL();
+  });
+
+  function handleSlider() {
+    const t = parseFloat(freqSlider.value);
+    currentBaseFreq = sliderToFreq(t);
+    freqValue.textContent = formatFreq(currentBaseFreq);
+    engine.updateFrequencies(currentBaseFreq);
+    viz.setState(currentRatio, currentBaseFreq);
+    syncURL();
+  }
+
+  freqSlider.addEventListener('input', handleSlider);
+
+  startBtn.addEventListener('click', () => {
+    if (engine.isRunning()) {
+      engine.stop();
+      startBtn.textContent = 'Start';
+      startBtn.classList.remove('active');
+    } else {
+      engine.start();
+      startBtn.textContent = 'Stop';
+      startBtn.classList.add('active');
+    }
+  });
+
+  vizBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      vizBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      viz.setMode(btn.dataset.mode);
+      syncURL();
+    });
+  });
+
+  exportBtn.addEventListener('click', () => {
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Rendering…';
+    exporter.download(currentRatio, currentBaseFreq, timbreSelect.value).then(() => {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Export WAV';
+    });
+  });
+}
+
+// Boot
+uiController();
+</script>
+
+</body>
+</html>
